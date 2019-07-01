@@ -1,5 +1,6 @@
 #include "trackmanager.h"
 #include "conversions.h"
+#include <QDebug>
 
 static const QString newDateFormat = QString("HFDTEDATE:"); // DD MM YY , NN CRLF HFDTEDATE:270418,01
 static const QString oldDateFormat = QString("HFDTE");      // DD MM YY CRLF HFDTE270418
@@ -74,7 +75,7 @@ bool TrackManager::addIgcFile(const QString &fileName)
             auto latDec = DMS::DDMMmmmToDecimalLat(lat.toStdWString(), lathems.toStdWString());
             auto lonDec = DMS::DDMMmmmToDecimalLon(lon.toStdWString(), lonhems.toStdWString());
 
-            auto secondsDiff = oldTrackTime.msecsTo(trackTime) / 1000.0;
+            auto secondsDiff = static_cast<qreal>(oldTrackTime.msecsTo(trackTime) / 1000.0);
 
             qreal vario{0};
 
@@ -140,7 +141,7 @@ unsigned int TrackManager::calculateWayPoints()
                 p.name = name;
                 p.coord = m_coord;
                 p.vario = average.toDouble();
-                p.width = 500;
+                p.width = 200;
                 p.distance = distanceWP;
                 p.dateTime = tPoint.get()->dateTime;
                 addWayPointToList(p);
@@ -184,29 +185,45 @@ unsigned int TrackManager::calculateWayPoints()
 
 bool TrackManager::isExistFile(const QString &filename)
 {
-    auto alreadyExists = any_of(mFileList.begin() , mFileList.end() , [&filename](auto entry){
+    /*auto alreadyExists = any_of(mFileList.begin() , mFileList.end() , [&filename](auto entry){
         return entry.get() == filename;
-    });
+    });*/
 
-    return alreadyExists;
+    for (auto it = mFileList.begin();it < mFileList.end(); it++) {
+        if(it->get() == filename)
+            return true;
+    }
+
+    return false;
 }
 
 bool TrackManager::isExistWPT(const QGeoCoordinate &m_coord)
 {
-    auto alreadyExists = any_of(mWayPointList.begin() , mWayPointList.end() , [&m_coord](auto entry){
+    /*auto alreadyExists = any_of(mWayPointList.begin() , mWayPointList.end() , [&m_coord](auto entry){
         return entry.coord == m_coord;
-    });
+    });*/
 
-    return alreadyExists;
+
+    for (auto it = mWayPointList.begin();it < mWayPointList.end(); it++) {
+        if(it->coord == m_coord)
+            return true;
+    }
+
+    return false;
 }
 
 bool TrackManager::isExistTrack(const QGeoCoordinate &m_coord)
 {
-    auto alreadyExists = any_of(mTrackPointList.begin() , mTrackPointList.end() , [&m_coord](auto entry){
+    /*auto alreadyExists = any_of(mTrackPointList.begin() , mTrackPointList.end() , [&m_coord](auto entry){
         return entry.get()->coord == m_coord;
-    });
+    });*/
 
-    return alreadyExists;
+    for (auto it = mTrackPointList.begin();it < mTrackPointList.end(); it++) {
+        if(it->get()->coord == m_coord)
+            return true;
+    }
+
+    return false;
 }
 
 void TrackManager::addFileToList(const QString &filename)

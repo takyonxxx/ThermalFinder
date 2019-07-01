@@ -160,9 +160,9 @@ Item  {
         Column {
             id: infoText
             y: 10
-            x : mapView.width - 175
+            x : mapView.width - 180
             spacing: 2
-            Text {id: positionText; text: "Zoom:\t" + map.zoomLevel.toFixed(1); color: "#004EAE"; font.bold: true}
+            Text {id: positionText; text: "Zoom:\t" + map.zoomLevel.toFixed(1); color: "blue"; font.bold: true}
             Text {color: positionText.color; font.bold: true; width: mapView.width / 2; elide: Text.ElideRight; text: "Lat:\t" + map.center.latitude.toFixed(6) }
             Text {color: positionText.color; font.bold: true; width: mapView.width / 2; elide: Text.ElideRight; text: "Lon:\t" + map.center.longitude.toFixed(6) }
             Text {color: positionText.color; font.bold: true; width: mapView.width / 2; elide: Text.ElideRight; text: "Tilt:\t" + map.tilt.toFixed(0) }
@@ -229,6 +229,8 @@ Item  {
                     Label {
                         id: labelBearingValue
                         text: bearingSlider.value.toFixed(2)
+                        color: "blue"
+                        font.bold: true
                         font.pixelSize: fontSize
                         rotation: -90
                         anchors.centerIn: parent
@@ -242,6 +244,8 @@ Item  {
                     Label {
                         id: labelTiltValue
                         text: tiltSlider.value.toFixed(2)
+                        color: "blue"
+                        font.bold: true
                         font.pixelSize: fontSize
                         rotation: -90
                         anchors.centerIn: parent
@@ -296,6 +300,7 @@ Item  {
                     Label {
                         id: labelBearing
                         text: "Bearing"
+                        color: "blue"
                         font.pixelSize: fontSize
                         font.bold: true
                         rotation: -90
@@ -310,6 +315,7 @@ Item  {
                     Label {
                         id: labelTilt
                         text: "Tilt"
+                        color: "blue"
                         font.pixelSize: fontSize
                         font.bold: true
                         rotation: -90

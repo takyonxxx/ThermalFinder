@@ -24,16 +24,24 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    bool IsNan( float value )
+    {
+        return ((*(uint*)&value) & 0x7fffffff) > 0x7f800000;
+    }
+
 private slots:
     void on_pushButton_LoadIgc_clicked();
+    void on_pushButton_LoadIgcPath_clicked();
     void on_pushButton_LoadWpt_clicked();
     void on_pushButton_CreateWpt_clicked();
     void on_pushButton_Clear_clicked();
     void on_pushButton_Exit_clicked();
+    void positionUpdated(QGeoPositionInfo);
+    void updateTimeout(void);
 
 private:
     void addIgcFile(const QString &);
-    void addWpFile(const QString &);   
+    void addWpFile(const QString &);
     void drawWayPoints(bool);
     void refreshInfo();
     void setMapCenter(qreal, qreal);
@@ -43,6 +51,10 @@ private:
     void addWayPointToMap(QVariant, QVariant, QVariant, QVariant);
     void addTrack(const QList<QGeoCoordinate>&);
     void clearMap();
+    int CopyResources();
+
+    bool startGpsSource();
+    QGeoPositionInfoSource *m_posSource{};
 
     TrackManager *mTrackManager{};
     QQuickView *mapView{};

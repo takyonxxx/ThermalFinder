@@ -31,6 +31,11 @@ MainWindow::MainWindow(QWidget *parent) :
     pushButton_LoadIgc->setStyleSheet("font-size: 12pt; color: white;background-color: rgba(0, 102, 153, 175);");
     pushButton_LoadIgc->setFixedWidth(150);
 
+    QPushButton *pushButton_LoadIgcPath = new QPushButton("Load Igc Path");
+    connect(pushButton_LoadIgcPath, &QPushButton::clicked, this, &MainWindow::on_pushButton_LoadIgcPath_clicked);
+    pushButton_LoadIgcPath->setStyleSheet("font-size: 12pt; color: white;background-color: rgba(0, 102, 153, 175);");
+    pushButton_LoadIgcPath->setFixedWidth(150);
+
     QPushButton *pushButton_CreateWp = new QPushButton("Create WPT File");
     connect(pushButton_CreateWp, &QPushButton::clicked, this, &MainWindow::on_pushButton_CreateWpt_clicked);
     pushButton_CreateWp->setStyleSheet("font-size: 12pt; color: white;background-color: rgba(0, 102, 153, 175);");
@@ -100,11 +105,12 @@ MainWindow::MainWindow(QWidget *parent) :
     textBrowser->setFixedWidth(150);
 
     mapView = new QQuickView();
-    mapView->setSource(QUrl(QStringLiteral("qrc:///qml/MapView.qml")));
+    mapView->setSource(QUrl(QStringLiteral("qrc:/qml/MapView.qml")));
     mapView->setResizeMode(QQuickView::SizeRootObjectToView);
     mapView->rootContext()->setContextProperty("pathController", &pathController);
 
     rootObject = mapView->rootObject();
+
 
     QWidget * wdg = new QWidget(this);
     QHBoxLayout *hlay = new QHBoxLayout(wdg);
@@ -123,15 +129,15 @@ MainWindow::MainWindow(QWidget *parent) :
     hlayEditDown->addWidget(label_VDown);
     hlayEditDown->addWidget(lineEdit_VarioDown);
 
-    QWidget *qmlWidget = QWidget::createWindowContainer(mapView, this);
-
-    vLayMap->addWidget(qmlWidget);
+    QWidget *qmlWidgetMap = QWidget::createWindowContainer(mapView, this);
+    vLayMap->addWidget(qmlWidgetMap);
+    hlay->addLayout(vLayMap);
 
     vLayControl->addWidget(pushButton_LoadIgc);
+    vLayControl->addWidget(pushButton_LoadIgcPath);
     vLayControl->addWidget(pushButton_CreateWp);
     vLayControl->addWidget(pushButton_LoadWp);
     vLayControl->addWidget(pushButton_Clear);
-
     vLayControl->addWidget(label_TCount);
     vLayControl->addWidget(label_TrackCount);
     vLayControl->addWidget(label_WCount);
@@ -140,9 +146,7 @@ MainWindow::MainWindow(QWidget *parent) :
     vLayControl->addLayout(hlayEditUp);
     vLayControl->addLayout(hlayEditDown);
     vLayControl->addWidget(textBrowser);
-
     vLayControl->addWidget(pushButton_Exit);
-
     vLayControl->setAlignment(Qt::AlignTop);
 
     for (int i = 0; i < vLayControl->count(); ++i)
@@ -156,15 +160,18 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     }
 
-    hlay->addLayout(vLayMap);
     hlay->addLayout(vLayControl);
 
     wdg->setLayout(hlay);
     setCentralWidget(wdg);
-    mapView->resize(width() - vLayControl->geometry().width() - 38, height() - 25);
-    setMapTilt(55);
-    setMapZoom(10);
 
+    setMapTilt(0);
+    setMapRotation(0);
+    setMapZoom(12);
+
+    startGpsSource();
+
+    CopyResources();
 }
 
 MainWindow::~MainWindow()
@@ -172,15 +179,47 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+int MainWindow::CopyResources()
+{
+    QString wptFileName(":/igc/Ayas_4_Vario.wpt");
+
+    QDataStream in, out;
+    QFile wptFile(wptFileName);
+    if (!wptFile.open(QIODevice::ReadOnly))
+        return EXIT_FAILURE;
+
+    in.setDevice(&wptFile);
+
+    QFile result("CurrentTask.wpt");
+    if (!result.open(QIODevice::WriteOnly))
+        return EXIT_FAILURE;
+
+    out.setDevice(&result);
+
+    char *data = new char[wptFile.size()];
+
+    in.readRawData(data, wptFile.size());
+    out.writeRawData(data, wptFile.size());
+
+    result.close();
+    wptFile.close();
+
+    delete [] data;
+
+    addWpFile("CurrentTask.wpt");
+    return EXIT_SUCCESS;
+}
+
 void MainWindow::changeEvent( QEvent* e )
 {
     if( e->type() == QEvent::WindowStateChange )
     {
-        mapView->resize(width() - vLayControl->geometry().width() - 38, height() - 25);
+
     }
 
     QWidget::changeEvent(e);
 }
+
 
 void MainWindow::addIgcFile(const QString &fileName)
 {
@@ -389,6 +428,21 @@ void MainWindow::clearMap()
     }
 }
 
+void MainWindow::on_pushButton_LoadIgcPath_clicked()
+{
+    QString path = QFileDialog::getExistingDirectory(this,tr("Choose a Igc Folder"), QDir::currentPath(), QFileDialog::DontResolveSymlinks | QFileDialog::ReadOnly);
+    if (path.isEmpty())
+        return;
+
+    QDir directory(path);
+
+    QStringList igcFiles = directory.entryList(QStringList() << "*.igc" << "*.IGC", QDir::Files);
+    for(auto igcFile: igcFiles)
+    {
+        addIgcFile( path + "/" + igcFile);
+    }
+}
+
 void MainWindow::on_pushButton_LoadIgc_clicked()
 {    
     auto fileName = QFileDialog::getOpenFileName(this,  tr("Choose Igc File"), QDir::currentPath(), tr("Igc File (*.igc)"));
@@ -404,6 +458,10 @@ void MainWindow::on_pushButton_LoadWpt_clicked()
     if (!fileName.isEmpty())
     {
         addWpFile(fileName);
+    }
+    else
+    {
+        addWpFile("CurrentTask.wpt");
     }
 }
 
@@ -452,3 +510,53 @@ void MainWindow::on_pushButton_Exit_clicked()
 {
     exit(0);
 }
+
+bool MainWindow::startGpsSource()
+{
+    m_posSource = QGeoPositionInfoSource::createDefaultSource(this);
+    if (m_posSource == nullptr)
+    {
+        qDebug() << "error: createDefaultSource";
+        return false;
+    }
+
+    if(!m_posSource->supportedPositioningMethods())
+    {
+        m_posSource = nullptr;
+        qDebug() << "error: supportedPositioningMethods";
+        return false;
+    }
+
+    m_posSource->setPreferredPositioningMethods(QGeoPositionInfoSource::AllPositioningMethods);
+    m_posSource->setUpdateInterval(0);
+    connect(m_posSource, &QGeoPositionInfoSource::positionUpdated, this, &MainWindow::positionUpdated);
+    connect(m_posSource, &QGeoPositionInfoSource::updateTimeout, this, &MainWindow::updateTimeout);
+
+    QString status;
+    status.append("Active Gps Source is: ");
+    status.append( m_posSource->sourceName());
+
+    qDebug() << status;
+    m_posSource->startUpdates();
+
+    return true;
+}
+
+void MainWindow::positionUpdated(QGeoPositionInfo gpsPos)
+{
+    if (!gpsPos.isValid() || !gpsPos.coordinate().isValid())
+        return;
+
+    setMapCenter(gpsPos.coordinate().latitude() , gpsPos.coordinate().longitude() );
+
+    auto m_direction = gpsPos.attribute(QGeoPositionInfo::Direction);
+    if(IsNan(static_cast<float>(m_direction))) m_direction = 0;
+
+    setMapRotation(360 - m_direction);
+}
+
+void MainWindow::updateTimeout(void)
+{
+    qDebug() << "updateTimeout";
+}
+
