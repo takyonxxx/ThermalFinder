@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network positioning location webenginewidgets
+QT       += core gui network positioning location
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets quickwidgets
 
