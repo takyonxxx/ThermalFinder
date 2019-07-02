@@ -10,6 +10,7 @@ Item  {
     id: mapView
     objectName: "mapView"
     visible: true
+    anchors.fill: parent
 
     Plugin {
         id: esriPlugin

@@ -16,7 +16,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     setWindowTitle("Thermal Finder");
-    setGeometry(0, 0, 900, 650);
+    setGeometry(0, 0, 800, 600);
 
 
     QRect desktopRect = QApplication::desktop()->availableGeometry(this);
@@ -101,21 +101,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     textBrowser = new QTextBrowser();
     textBrowser->setStyleSheet("font: 10pt; color: #00cccc; background-color: #001a1a;");
-    textBrowser->append("Please Load Igc File...");
     textBrowser->setFixedWidth(150);
 
     mapView = new QQuickView();
     mapView->setSource(QUrl(QStringLiteral("qrc:/qml/MapView.qml")));
-    mapView->setResizeMode(QQuickView::SizeRootObjectToView);
     mapView->rootContext()->setContextProperty("pathController", &pathController);
 
     rootObject = mapView->rootObject();
-
-
-    QWidget * wdg = new QWidget(this);
-    QHBoxLayout *hlay = new QHBoxLayout(wdg);
-    vLayMap = new QVBoxLayout();
-    vLayControl = new QVBoxLayout();
 
     QHBoxLayout *hlayEditMin = new QHBoxLayout();
     hlayEditMin->addWidget(label_VMin);
@@ -129,42 +121,40 @@ MainWindow::MainWindow(QWidget *parent) :
     hlayEditDown->addWidget(label_VDown);
     hlayEditDown->addWidget(lineEdit_VarioDown);
 
+    QVBoxLayout *vLeft = new QVBoxLayout();
+    QVBoxLayout *vRight = new QVBoxLayout();
+
     QWidget *qmlWidgetMap = QWidget::createWindowContainer(mapView, this);
-    vLayMap->addWidget(qmlWidgetMap);
-    hlay->addLayout(vLayMap);
+    vLeft ->addWidget(qmlWidgetMap);
 
-    vLayControl->addWidget(pushButton_LoadIgc);
-    vLayControl->addWidget(pushButton_LoadIgcPath);
-    vLayControl->addWidget(pushButton_CreateWp);
-    vLayControl->addWidget(pushButton_LoadWp);
-    vLayControl->addWidget(pushButton_Clear);
-    vLayControl->addWidget(label_TCount);
-    vLayControl->addWidget(label_TrackCount);
-    vLayControl->addWidget(label_WCount);
-    vLayControl->addWidget(label_WayPointCount);
-    vLayControl->addLayout(hlayEditMin);
-    vLayControl->addLayout(hlayEditUp);
-    vLayControl->addLayout(hlayEditDown);
-    vLayControl->addWidget(textBrowser);
-    vLayControl->addWidget(pushButton_Exit);
-    vLayControl->setAlignment(Qt::AlignTop);
+    QGridLayout *mainLayout  = new QGridLayout(this);
 
-    for (int i = 0; i < vLayControl->count(); ++i)
-    {
-        QWidget *widget = vLayControl->itemAt(i)->widget();
-        if (widget != nullptr)
-        {
-            QTextBrowser *tempTextBrowser = dynamic_cast<QTextBrowser*>(widget);
-            if(!tempTextBrowser)
-                vLayControl->setAlignment(widget, Qt::AlignCenter);
-        }
-    }
+    mainLayout->setSpacing(5);
+    mainLayout->setMargin(5);
+    label_TrackCount->setMargin(5);
+    label_WayPointCount->setMargin(5);
 
-    hlay->addLayout(vLayControl);
+    vRight->addWidget(pushButton_LoadIgc);
+    vRight->addWidget(pushButton_LoadIgcPath);
+    vRight->addWidget(pushButton_CreateWp);
+    vRight->addWidget(pushButton_LoadWp);
+    vRight->addWidget(pushButton_Clear);
+    vRight->addWidget(label_TCount);
+    vRight->addWidget(label_TrackCount);
+    vRight->addWidget(label_WCount);
+    vRight->addWidget(label_WayPointCount);
+    vRight->addLayout(hlayEditMin);
+    vRight->addLayout(hlayEditUp);
+    vRight->addLayout(hlayEditDown);
+    vRight->addWidget(textBrowser);
+    vRight->addWidget(pushButton_Exit);
 
-    wdg->setLayout(hlay);
-    setCentralWidget(wdg);
+    mainLayout->addLayout(vLeft, 0 , 0);
+    mainLayout->addLayout(vRight, 0 , 1);
 
+    QWidget* central_widget = new QWidget(this);
+    central_widget->setLayout(mainLayout);
+    setCentralWidget(central_widget);
     setMapTilt(0);
     setMapRotation(0);
     setMapZoom(12);
@@ -172,6 +162,8 @@ MainWindow::MainWindow(QWidget *parent) :
     startGpsSource();
 
     CopyResources();
+
+    textBrowser->setText("Please Load Igc File...");
 }
 
 MainWindow::~MainWindow()
@@ -183,6 +175,22 @@ int MainWindow::CopyResources()
 {
     QString wptFileName(":/igc/Ayas_4_Vario.wpt");
 
+    QString m_dataLocation = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0);
+    if (QDir(m_dataLocation).exists()) {
+        qDebug() << "App data directory exists. " << m_dataLocation;
+    }
+    else
+    {
+        if (QDir("").mkpath(m_dataLocation))
+        {
+            qDebug() << "Created app data directory. " << m_dataLocation;
+        }
+        else
+        {
+            qDebug() << "Failed to create app data directory. " << m_dataLocation;
+        }
+    }
+
     QDataStream in, out;
     QFile wptFile(wptFileName);
     if (!wptFile.open(QIODevice::ReadOnly))
@@ -190,7 +198,7 @@ int MainWindow::CopyResources()
 
     in.setDevice(&wptFile);
 
-    QFile result("CurrentTask.wpt");
+    QFile result(m_dataLocation + "/CurrentTask.wpt");
     if (!result.open(QIODevice::WriteOnly))
         return EXIT_FAILURE;
 
@@ -206,7 +214,7 @@ int MainWindow::CopyResources()
 
     delete [] data;
 
-    addWpFile("CurrentTask.wpt");
+    addWpFile(m_dataLocation + "/CurrentTask.wpt");
     return EXIT_SUCCESS;
 }
 
