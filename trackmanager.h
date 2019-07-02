@@ -46,7 +46,7 @@ public:
 
     bool addIgcFile(const QString &);
     unsigned int calculateWayPoints();
-    bool writeWayPoints();
+    bool writeWayPoints(const QString &);
     bool addWayPointFile(const QString &);
     bool isExistFile(const QString &);
     bool isExistWPT(const QGeoCoordinate &m_coord);

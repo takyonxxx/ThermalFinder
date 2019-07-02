@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network positioning location
+QT       += core gui network positioning location webenginewidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets quickwidgets
 
@@ -41,7 +41,8 @@ HEADERS += \
         trackmanager.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+        webview.ui
 
 
 # Default rules for deployment.

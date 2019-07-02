@@ -385,23 +385,8 @@ QDate TrackManager::getFlightDate(const QString &dateString)
     return QDate::fromString(dd + "-" + mm + "-" + yyyy, "dd-MM-yyyy");
 }
 
-bool TrackManager::writeWayPoints()
+bool TrackManager::writeWayPoints(const QString &fileName)
 {
-    QDateTime currentDate = QDateTime::currentDateTime();
-    currentDate.setTimeSpec(Qt::UTC);
-    QDateTime localTime = currentDate.toLocalTime();
-
-    QString dir = QDir::currentPath();
-    QString wptName = "Wpt_" +  localTime.toString("dd-MM-yyyy_HH-mm-ss") + ".wpt";
-    QString filters("WayPoint files (*.wpt)");
-    QString defaultFilter("WayPoint files (*.wpt)");
-
-    QString fileName =  QFileDialog::getSaveFileName(nullptr, tr("Save WayPoint file"), dir + "/" + wptName,
-                                                     filters, &defaultFilter);
-
-    if (fileName.isEmpty())
-        return false;
-
     ofstream wpFile;
     wpFile.open(fileName.toStdString(), ios::out);
 

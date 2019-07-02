@@ -18,7 +18,6 @@ MainWindow::MainWindow(QWidget *parent) :
     setWindowTitle("Thermal Finder");
     setGeometry(0, 0, 800, 600);
 
-
     QRect desktopRect = QApplication::desktop()->availableGeometry(this);
     QPoint center = desktopRect.center();
 
@@ -171,36 +170,47 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-int MainWindow::CopyResources()
-{
-    QString wptFileName(":/igc/Ayas_4_Vario.wpt");
-
-    QString m_dataLocation = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0);
-    if (QDir(m_dataLocation).exists()) {
-        qDebug() << "App data directory exists. " << m_dataLocation;
+void MainWindow::CopyResources()
+{ 
+    QString dataLocation = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0);
+    if (QDir(dataLocation).exists()) {
+        qDebug() << "App data directory exists. " << dataLocation;
     }
     else
     {
-        if (QDir("").mkpath(m_dataLocation))
+        if (QDir("").mkpath(dataLocation))
         {
-            qDebug() << "Created app data directory. " << m_dataLocation;
+            qDebug() << "Created app data directory. " << dataLocation;
         }
         else
         {
-            qDebug() << "Failed to create app data directory. " << m_dataLocation;
+            qDebug() << "Failed to create app data directory. " << dataLocation;
         }
     }
 
+    QDirIterator it(":/igc", QDirIterator::Subdirectories);
+    while (it.hasNext())
+    {
+        QString resourceFile =  it.next();
+        copyResource(resourceFile, dataLocation);
+    }
+}
+
+void MainWindow::copyResource(QString & resourceFile, const QString & dataLocation)
+{
+
     QDataStream in, out;
-    QFile wptFile(wptFileName);
+    QFile wptFile(resourceFile);
     if (!wptFile.open(QIODevice::ReadOnly))
-        return EXIT_FAILURE;
+        return;
+
+    QString resultFile(dataLocation + resourceFile.remove(":/igc"));
 
     in.setDevice(&wptFile);
 
-    QFile result(m_dataLocation + "/CurrentTask.wpt");
+    QFile result(resultFile);
     if (!result.open(QIODevice::WriteOnly))
-        return EXIT_FAILURE;
+        return;
 
     out.setDevice(&result);
 
@@ -213,9 +223,6 @@ int MainWindow::CopyResources()
     wptFile.close();
 
     delete [] data;
-
-    addWpFile(m_dataLocation + "/CurrentTask.wpt");
-    return EXIT_SUCCESS;
 }
 
 void MainWindow::changeEvent( QEvent* e )
@@ -438,7 +445,12 @@ void MainWindow::clearMap()
 
 void MainWindow::on_pushButton_LoadIgcPath_clicked()
 {
-    QString path = QFileDialog::getExistingDirectory(this,tr("Choose a Igc Folder"), QDir::currentPath(), QFileDialog::DontResolveSymlinks | QFileDialog::ReadOnly);
+    QString dataLocation = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0);
+    if (QDir(dataLocation).exists()) {
+        qDebug() << "App data directory exists. " << dataLocation;
+    }
+
+    QString path = QFileDialog::getExistingDirectory(this,tr("Choose a Igc Folder"), dataLocation, QFileDialog::DontResolveSymlinks | QFileDialog::ReadOnly);
     if (path.isEmpty())
         return;
 
@@ -453,7 +465,12 @@ void MainWindow::on_pushButton_LoadIgcPath_clicked()
 
 void MainWindow::on_pushButton_LoadIgc_clicked()
 {    
-    auto fileName = QFileDialog::getOpenFileName(this,  tr("Choose Igc File"), QDir::currentPath(), tr("Igc File (*.igc)"));
+    QString dataLocation = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0);
+    if (QDir(dataLocation).exists()) {
+        qDebug() << "App data directory exists. " << dataLocation;
+    }
+
+    auto fileName = QFileDialog::getOpenFileName(this,  tr("Choose Igc File"), dataLocation, tr("Igc File (*.igc)"));
     if (!fileName.isEmpty())
     {
         addIgcFile(fileName);
@@ -462,7 +479,12 @@ void MainWindow::on_pushButton_LoadIgc_clicked()
 
 void MainWindow::on_pushButton_LoadWpt_clicked()
 {
-    auto fileName = QFileDialog::getOpenFileName(this,  tr("Choose WP File"), QDir::currentPath(), tr("Wpt File (*.wpt)"));
+    QString dataLocation = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0);
+    if (QDir(dataLocation).exists()) {
+        qDebug() << "App data directory exists. " << dataLocation;
+    }
+
+    auto fileName = QFileDialog::getOpenFileName(this,  tr("Choose WP File"), dataLocation, tr("Wpt File (*.wpt)"));
     if (!fileName.isEmpty())
     {
         addWpFile(fileName);
@@ -486,7 +508,26 @@ void MainWindow::on_pushButton_CreateWpt_clicked()
             return;
         }
 
-        if(mTrackManager->writeWayPoints())
+        QDateTime currentDate = QDateTime::currentDateTime();
+        currentDate.setTimeSpec(Qt::UTC);
+        QDateTime localTime = currentDate.toLocalTime();
+
+        QString dataLocation = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).value(0);
+        if (QDir(dataLocation).exists()) {
+            qDebug() << "App data directory exists. " << dataLocation;
+        }
+
+        QString wptName = "Wpt_" +  localTime.toString("dd-MM-yyyy_HH-mm-ss") + ".wpt";
+        QString filters("WayPoint files (*.wpt)");
+        QString defaultFilter("WayPoint files (*.wpt)");
+
+        QString fileName =  QFileDialog::getSaveFileName(nullptr, tr("Save WayPoint file"), dataLocation + "/" + wptName,
+                                                         filters, &defaultFilter);
+
+        if (fileName.isEmpty())
+            return;
+
+        if(mTrackManager->writeWayPoints(fileName))
         {
             QMessageBox::information(
                         this,

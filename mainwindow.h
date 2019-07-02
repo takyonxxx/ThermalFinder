@@ -51,7 +51,8 @@ private:
     void addWayPointToMap(QVariant, QVariant, QVariant, QVariant);
     void addTrack(const QList<QGeoCoordinate>&);
     void clearMap();
-    int CopyResources();
+    void CopyResources();
+    void copyResource(QString &, const QString &);
 
     bool startGpsSource();
     QGeoPositionInfoSource *m_posSource{};
