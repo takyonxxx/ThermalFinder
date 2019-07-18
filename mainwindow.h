@@ -22,12 +22,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
-
-    bool IsNan( float value )
-    {
-        return ((*(uint*)&value) & 0x7fffffff) > 0x7f800000;
-    }
+    ~MainWindow();    
 
 private slots:
     void on_pushButton_LoadIgc_clicked();
@@ -63,8 +58,7 @@ private:
     QLabel *label_TrackCount{};
     QLabel *label_WayPointCount{};
     QLineEdit *lineEdit_VarioMin{};
-    QLineEdit *lineEdit_VarioUp{};
-    QLineEdit *lineEdit_VarioDown{};
+    QLineEdit *lineEdit_VarioFactor{};
     QTextBrowser *textBrowser{};
     QVBoxLayout *vLayMap{};
     QVBoxLayout *vLayControl{};

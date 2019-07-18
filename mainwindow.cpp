@@ -78,25 +78,16 @@ MainWindow::MainWindow(QWidget *parent) :
     lineEdit_VarioMin = new QLineEdit("3");
     lineEdit_VarioMin->setStyleSheet("font-size: 10pt; color: black; background-color: white;");
     lineEdit_VarioMin->setFixedWidth(32);
-    lineEdit_VarioMin->setValidator( new QDoubleValidator(0, 100, 2, this));
+    lineEdit_VarioMin->setValidator( new QDoubleValidator(0, 100, 2, this));   
 
-    QLabel *label_VUp = new QLabel(" Vario Up (sec)\t");
-    label_VUp->setStyleSheet("font-size: 10pt; color: white;background-color: rgba(0, 102, 102, 175);");
-    label_VUp->setFixedWidth(110);
+    QLabel *label_VFactor = new QLabel(" Vario Factor\t");
+    label_VFactor->setStyleSheet("font-size: 10pt; color: white;background-color: rgba(0, 102, 102, 175);");
+    label_VFactor->setFixedWidth(110);
 
-    lineEdit_VarioUp = new QLineEdit("60");
-    lineEdit_VarioUp->setStyleSheet("font-size: 10pt; color: black; background-color: white;");
-    lineEdit_VarioUp->setFixedWidth(32);
-    lineEdit_VarioUp->setValidator(new QRegExpValidator(QRegExp("[0-9]*"), lineEdit_VarioUp));
-
-    QLabel *label_VDown = new QLabel(" Vario Down (sec)\t");
-    label_VDown->setStyleSheet("font-size: 10pt; color: white;background-color: rgba(0, 102, 102, 175);");
-    label_VDown->setFixedWidth(110);
-
-    lineEdit_VarioDown = new QLineEdit("360");
-    lineEdit_VarioDown->setStyleSheet("font-size: 10pt; color: black; background-color: white;");
-    lineEdit_VarioDown->setFixedWidth(32);
-    lineEdit_VarioDown->setValidator(new QRegExpValidator(QRegExp("[0-9]*"), lineEdit_VarioDown));
+    lineEdit_VarioFactor = new QLineEdit("30");
+    lineEdit_VarioFactor->setStyleSheet("font-size: 10pt; color: black; background-color: white;");
+    lineEdit_VarioFactor->setFixedWidth(32);
+    lineEdit_VarioFactor->setValidator( new QDoubleValidator(0, 100, 2, this));
 
     textBrowser = new QTextBrowser();
     textBrowser->setStyleSheet("font: 10pt; color: #00cccc; background-color: #001a1a;");
@@ -108,17 +99,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     rootObject = mapView->rootObject();
 
-    QHBoxLayout *hlayEditMin = new QHBoxLayout();
-    hlayEditMin->addWidget(label_VMin);
-    hlayEditMin->addWidget(lineEdit_VarioMin);
+    QHBoxLayout *hlayEditVMin = new QHBoxLayout();
+    hlayEditVMin->addWidget(label_VMin);
+    hlayEditVMin->addWidget(lineEdit_VarioMin);
 
-    QHBoxLayout *hlayEditUp = new QHBoxLayout();
-    hlayEditUp->addWidget(label_VUp);
-    hlayEditUp->addWidget(lineEdit_VarioUp);
-
-    QHBoxLayout *hlayEditDown= new QHBoxLayout();
-    hlayEditDown->addWidget(label_VDown);
-    hlayEditDown->addWidget(lineEdit_VarioDown);
+    QHBoxLayout *hlayEditVFactor = new QHBoxLayout();
+    hlayEditVFactor->addWidget(label_VFactor);
+    hlayEditVFactor->addWidget(lineEdit_VarioFactor);
 
     QVBoxLayout *vLeft = new QVBoxLayout();
     QVBoxLayout *vRight = new QVBoxLayout();
@@ -142,9 +129,8 @@ MainWindow::MainWindow(QWidget *parent) :
     vRight->addWidget(label_TrackCount);
     vRight->addWidget(label_WCount);
     vRight->addWidget(label_WayPointCount);
-    vRight->addLayout(hlayEditMin);
-    vRight->addLayout(hlayEditUp);
-    vRight->addLayout(hlayEditDown);
+    vRight->addLayout(hlayEditVMin);
+    vRight->addLayout(hlayEditVFactor);
     vRight->addWidget(textBrowser);
     vRight->addWidget(pushButton_Exit);
 
@@ -250,14 +236,11 @@ void MainWindow::addIgcFile(const QString &fileName)
             return;
         }
 
-        auto min = static_cast<qreal>(lineEdit_VarioMin->text().toDouble());
-        auto up = static_cast<int>(lineEdit_VarioUp->text().toInt());
-        auto down = static_cast<int>(lineEdit_VarioDown->text().toInt());
+        auto vMin = static_cast<qreal>(lineEdit_VarioMin->text().toDouble());
+        auto vFactor = static_cast<int>(lineEdit_VarioFactor->text().toInt());
 
-        mTrackManager->setVarioMin(min);
-        mTrackManager->setVarioUpCount(up);
-        mTrackManager->setVarioDownCount(down);
-
+        mTrackManager->setVarioMin(vMin);
+        mTrackManager->setVarioFactor(vFactor);
         mTrackManager->clearTrackPoints();
 
         if(mTrackManager->addIgcFile(fileName))
@@ -331,7 +314,7 @@ void MainWindow::drawWayPoints(bool showVario)
         else
             text = wPoint.name;
 
-        addWayPointToMap(coord.latitude(), coord.longitude(), wPoint.width, text);
+        addWayPointToMap(coord.latitude(), coord.longitude(), wPoint.radius, text);
     }
 }
 
@@ -598,9 +581,7 @@ void MainWindow::positionUpdated(QGeoPositionInfo gpsPos)
 
     setMapCenter(gpsPos.coordinate().latitude() , gpsPos.coordinate().longitude() );
 
-    auto m_direction = gpsPos.attribute(QGeoPositionInfo::Direction);
-    if(IsNan(static_cast<float>(m_direction))) m_direction = 0;
-
+    auto m_direction = gpsPos.attribute(QGeoPositionInfo::Direction);    
     setMapRotation(360 - m_direction);
 }
 

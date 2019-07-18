@@ -12,7 +12,7 @@
 #include <QMessageBox>
 #include <QTextStream>
 #include <QFileDialog>
-#include <QtMath>
+
 using namespace std;
 
 struct WayPoint{
@@ -20,7 +20,7 @@ struct WayPoint{
     QGeoCoordinate coord;
     qreal vario;
     qreal distance;
-    qreal width;
+    qreal radius;
     QDateTime dateTime;
     QString toString()
     {
@@ -42,6 +42,11 @@ public:
     TrackManager();
     ~TrackManager();
 
+    bool IsNan( float value )
+    {
+        return ((*(uint*)&value) & 0x7fffffff) > 0x7f800000;
+    }
+
     static TrackManager* getInstance();
 
     bool addIgcFile(const QString &);
@@ -58,6 +63,8 @@ public:
     void clearTrackPoints();
     void clearWayPoints();
     void resetValues();
+    WayPoint getWPTbyIndex(int index);
+    //WayPoint getTrackbyIndex(int index);
     QGeoCoordinate GetMidPoint(std::vector<WayPoint> data);
 
     QDate getFlightDate(const QString &dateString);
@@ -71,13 +78,12 @@ public:
     qreal getMinVario() const;
     QString getDuration() const;
 
-    void setVarioMin(const qreal &value);
-    void setVarioUpCount(const int &value);
-    void setVarioDownCount(const int &value);
-
+    void setVarioMin(const qreal &value);   
     QList<QGeoCoordinate> getPath() const;    
 
     std::vector<WayPoint> getWayPointList() const;
+
+    void setVarioFactor(int value);
 
 private:
 
@@ -88,14 +94,12 @@ private:
     QDateTime  oldTrackTime{};
     qreal      oldAltitude{0};
     qreal      varioMin{INT_MAX};
+    int        varioFactor{0};
     qreal      maxAltitude{INT_MIN};
     qreal      minAltitude{INT_MAX};
     qreal      maxDistance{INT_MIN};
     qreal      maxVarioValue{INT_MIN};
     qreal      minVarioValue{INT_MAX};
-
-    int        varioUpCount{0};
-    int        varioDownCount{0};    
 
     static TrackManager* instance;
 

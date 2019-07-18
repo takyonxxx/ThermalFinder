@@ -1,10 +1,10 @@
 #include "trackmanager.h"
 #include "conversions.h"
-#include <QDebug>
+#include <QtDebug>
 
 static const QString newDateFormat = QString("HFDTEDATE:"); // DD MM YY , NN CRLF HFDTEDATE:270418,01
 static const QString oldDateFormat = QString("HFDTE");      // DD MM YY CRLF HFDTE270418
-static int igcWPCount = 0;
+static int WPTCount = 0;
 
 TrackManager* TrackManager::instance = nullptr;
 
@@ -108,63 +108,71 @@ bool TrackManager::addIgcFile(const QString &fileName)
 unsigned int TrackManager::calculateWayPoints()
 {
     vector<qreal> vecWPVario{};
-
-    auto countUp = 0;
-    auto countDown = 0;
-    auto foundWP = false;
-
+    auto foundThermal = false;
     auto beginCoord = mTrackPointList.at(0)->coord;
+    QGeoCoordinate beginThermalCoord {};
+    QGeoCoordinate currentThermalCoord {};
+    int sinkCount = 0;
+    int upCount = 0;
+    int trackCount = 0;
+    auto beginThermalAlt = 0.0;
 
-    for (auto tPoint : mTrackPointList)
+    for (auto trackPoint : mTrackPointList)
     {
         QGeoCoordinate m_coord;
-        m_coord.setLatitude(tPoint.get()->coord.latitude());
-        m_coord.setLongitude(tPoint.get()->coord.longitude());
-        m_coord.setAltitude(tPoint.get()->coord.altitude());
+        m_coord.setLatitude(trackPoint.get()->coord.latitude());
+        m_coord.setLongitude(trackPoint.get()->coord.longitude());
+        m_coord.setAltitude(trackPoint.get()->coord.altitude());
 
-        if(!foundWP && tPoint.get()->vario >= varioMin)
+        if(trackPoint.get()->vario >= varioMin)
         {
-            vecWPVario.emplace_back(tPoint.get()->vario);
-            countUp++;
-
-            if(countUp >= varioUpCount)
+            if(!foundThermal)
             {
-                auto average = QString::number(accumulate( vecWPVario.begin(), vecWPVario.end(), 0.0)/vecWPVario.size(),'f',2);
-
-                foundWP = true;
-
-                auto distanceWP = beginCoord.distanceTo(m_coord);
-
-                auto name = QString("Wpt") + QString::number(igcWPCount + 1);
-
-                WayPoint p;
-                p.name = name;
-                p.coord = m_coord;
-                p.vario = average.toDouble();
-                p.width = 200;
-                p.distance = distanceWP;
-                p.dateTime = tPoint.get()->dateTime;
-                addWayPointToList(p);
-
-                igcWPCount++;
-
-                vecWPVario.clear();
-                countUp = 0;
-                countDown = 0;
+                beginThermalAlt = m_coord.altitude();
+                beginThermalCoord = m_coord;
+                foundThermal = true;
             }
+
+            vecWPVario.emplace_back(trackPoint.get()->vario);
+            currentThermalCoord = m_coord;
+            sinkCount = 0;
+            upCount++;
         }
         else
         {
-            countDown++;
-            if(countDown >= varioDownCount)
+            if(sinkCount >= varioFactor)
             {
-                foundWP = false;
+                auto average = accumulate(vecWPVario.begin(), vecWPVario.end(), 0.0) / vecWPVario.size();
+                auto radius = beginThermalCoord.distanceTo(currentThermalCoord) / 2;
+                auto distanceWP = beginCoord.distanceTo(currentThermalCoord);
+                auto name = QString("Wpt") + QString::number(WPTCount + 1);
+
+                if(upCount > varioFactor)
+                {
+                    int wpPoint = trackCount - sinkCount - static_cast<int>(vecWPVario.size()/2);
+
+                    WayPoint p;
+                    p.name = name;
+                    p.coord = mTrackPointList.at(wpPoint).get()->coord;
+                    p.vario = QString::number(average, 'f', 2).toDouble();
+                    p.radius = radius;
+                    p.distance = distanceWP;
+                    p.dateTime = mTrackPointList.at(wpPoint).get()->dateTime;
+                    addWayPointToList(p);
+                    WPTCount++;
+                }
+
+                foundThermal = false;
+                vecWPVario.clear();
+                upCount = 0;
             }
+
+            sinkCount++;
         }
 
         auto distance = beginCoord.distanceTo(m_coord);
-        auto vario = tPoint.get()->vario;
-        auto altitude = tPoint.get()->coord.altitude();
+        auto vario = trackPoint.get()->vario;
+        auto altitude = trackPoint.get()->coord.altitude();
 
         if(distance > maxDistance)
             maxDistance = distance;
@@ -178,9 +186,11 @@ unsigned int TrackManager::calculateWayPoints()
             maxAltitude = altitude;
         else if(altitude < minAltitude)
             minAltitude = altitude;
+
+        trackCount++;
     }
 
-    return static_cast<unsigned int>(igcWPCount);
+    return static_cast<unsigned int>(WPTCount);
 }
 
 bool TrackManager::isExistFile(const QString &filename)
@@ -224,6 +234,12 @@ bool TrackManager::isExistTrack(const QGeoCoordinate &m_coord)
     }
 
     return false;
+}
+
+WayPoint TrackManager::getWPTbyIndex(int index)
+{
+    auto wpt = mWayPointList.at(index);
+    return wpt;
 }
 
 void TrackManager::addFileToList(const QString &filename)
@@ -276,7 +292,7 @@ void TrackManager::resetValues()
     maxDistance = INT_MIN;
     maxVarioValue = INT_MIN;
     minVarioValue = INT_MAX;
-    igcWPCount = 0;
+    WPTCount = 0;
 
     clearIgcFiles();
     clearWayPoints();
@@ -345,16 +361,6 @@ void TrackManager::setVarioMin(const qreal &value)
     varioMin = value;
 }
 
-void TrackManager::setVarioUpCount(const int &value)
-{
-    varioUpCount = value;
-}
-
-void TrackManager::setVarioDownCount(const int &value)
-{
-    varioDownCount = value;
-}
-
 QList<QGeoCoordinate> TrackManager::getPath() const
 {   
     QList<QGeoCoordinate> cList;
@@ -373,6 +379,11 @@ QList<QGeoCoordinate> TrackManager::getPath() const
 std::vector<WayPoint> TrackManager::getWayPointList() const
 {
     return mWayPointList;
+}
+
+void TrackManager::setVarioFactor(int value)
+{
+    varioFactor = value;
 }
 
 QDate TrackManager::getFlightDate(const QString &dateString)
@@ -488,7 +499,7 @@ bool TrackManager::addWayPointFile(const QString &fileName)
         p.name = name;
         p.coord = m_coord;
         p.vario = 0;
-        p.width = 500;
+        p.radius = 500;
         addWayPointToList(p);
     }
 
