@@ -489,7 +489,7 @@ bool TrackManager::addWayPointFile(const QString &fileName)
         QString alt =  sLine.mid(44,6).replace(" ", "");
         auto altitude = alt.toDouble();
 
-        QString name =  sLine.mid(50,10).replace(" ", "");
+        QString name =  sLine.mid(0,10).replace(" ", "");
 
         m_coord.setLatitude(decLat);
         m_coord.setLongitude(decLon);
@@ -499,7 +499,7 @@ bool TrackManager::addWayPointFile(const QString &fileName)
         p.name = name;
         p.coord = m_coord;
         p.vario = 0;
-        p.radius = 500;
+        p.radius = 1000;
         addWayPointToList(p);
     }
 
