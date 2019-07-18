@@ -15,6 +15,13 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+#if defined(ANDROID) || defined(__ANDROID__)
+    if (!requestFineLocationPermission())
+        qApp->quit();
+    setScreenOrientation(SCREEN_ORIENTATION_LANDSCAPE);
+#endif
+
     setWindowTitle("Thermal Finder");
     setGeometry(0, 0, 800, 600);
 
@@ -78,7 +85,7 @@ MainWindow::MainWindow(QWidget *parent) :
     lineEdit_VarioMin = new QLineEdit("3");
     lineEdit_VarioMin->setStyleSheet("font-size: 10pt; color: black; background-color: white;");
     lineEdit_VarioMin->setFixedWidth(32);
-    lineEdit_VarioMin->setValidator( new QDoubleValidator(0, 100, 2, this));   
+    lineEdit_VarioMin->setValidator( new QDoubleValidator(0, 100, 2, this));
 
     QLabel *label_VFactor = new QLabel(" Vario Factor\t");
     label_VFactor->setStyleSheet("font-size: 10pt; color: white;background-color: rgba(0, 102, 102, 175);");
@@ -155,6 +162,30 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
+
+#if defined(ANDROID) || defined(__ANDROID__)
+
+bool MainWindow::setScreenOrientation(int orientation)
+{
+    QAndroidJniObject activity = QtAndroid::androidActivity();
+
+    if(activity.isValid())
+    {
+        activity.callMethod<void>("setRequestedOrientation", "(I)V", orientation);
+        keep_screen_on(true);
+        return true;
+    }
+    return false;
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *k)
+{
+    if( k->key() == Qt::Key_MediaPrevious )
+    {
+        return;
+    }
+}
+#endif
 
 void MainWindow::CopyResources()
 { 
@@ -581,7 +612,7 @@ void MainWindow::positionUpdated(QGeoPositionInfo gpsPos)
 
     setMapCenter(gpsPos.coordinate().latitude() , gpsPos.coordinate().longitude() );
 
-    auto m_direction = gpsPos.attribute(QGeoPositionInfo::Direction);    
+    auto m_direction = gpsPos.attribute(QGeoPositionInfo::Direction);
     setMapRotation(360 - m_direction);
 }
 

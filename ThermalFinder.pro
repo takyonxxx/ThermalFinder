@@ -6,10 +6,16 @@
 
 QT       += core gui network positioning location
 
+CONFIG += mobility
+MOBILITY += sensors
+MOBILITY += location
+
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets quickwidgets
 
 TARGET = ThermalFinder
 TEMPLATE = app
+
+win32: DEFINES += WIN32 _WINDOWS _USE_MATH_DEFINES
 
 win32:RC_ICONS += $$PWD\icons\app.ico
 
@@ -56,6 +62,10 @@ ios {
 QMAKE_INFO_PLIST = ios/Info.plist
 }
 
+android {
+
+QT += androidextras
+
 DISTFILES += \
     android/AndroidManifest.xml \
     android/build.gradle \
@@ -69,4 +79,4 @@ contains(ANDROID_TARGET_ARCH,armeabi-v7a) {
     ANDROID_PACKAGE_SOURCE_DIR = \
         $$PWD/android
 }
-
+}
